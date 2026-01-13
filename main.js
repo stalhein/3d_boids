@@ -1,6 +1,7 @@
 import {Camera} from "./camera.js";
 import {Shader} from "./shader.js";
 import {Boid} from "./boid.js";
+import {World} from "./world.js";
 import { mat4, vec3 } from "https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/esm/index.js";
 
 const canvas = document.getElementById("canvas");
@@ -15,6 +16,8 @@ if (!gl) {
 gl.viewport(0, 0, canvas.width, canvas.height);
 gl.enable(gl.DEPTH_TEST);
 
+const world = new World(gl);
+world.createFloorMesh();
 const camera = new Camera();
 const shader = new Shader(gl, "shaders/vertex.glsl", "shaders/fragment.glsl");
 await shader.load();
@@ -27,8 +30,8 @@ window.addEventListener("resize", () => {
 const boids = [];
 
 for (let i = 0; i < 200; ++i) {
-    boids.push(new Boid(gl, [(Math.random()-0.5)*100, (Math.random()-0.5)*100, (Math.random()-0.5)*100],
-                            [(Math.random()-0.5)*2, (Math.random()-0.5)*2, (Math.random()-0.5)*2]));
+    boids.push(new Boid(gl, [(Math.random())*100, (Math.random())*100, (Math.random())*100],
+                            [1, 1, 1]));
 }
 
 let lastTime = performance.now();
@@ -39,7 +42,7 @@ function loop(time) {
     camera.update(dt);
 
     for (const boid of boids) {
-        boid.update(dt);
+        boid.update(dt, boids);
     }
 
     gl.clearColor(0.4, 0.6, 0.5, 1.0);
@@ -58,6 +61,10 @@ function loop(time) {
     shader.use();
     shader.setMat4("uProjection", projection);
     shader.setMat4("uView", view);
+
+    shader.setMat4("uModel", mat4.create());
+
+    world.render();
 
     for (const boid of boids) {
         shader.setMat4("uModel", boid.model);
